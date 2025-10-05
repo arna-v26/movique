@@ -1,133 +1,147 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Triangle {
-  id: number;
   x: number;
   y: number;
+  vx: number;
+  vy: number;
   size: number;
   color: string;
   rotation: number;
-  vx: number;
-  vy: number;
 }
 
-const colors = [
-  "hsl(270, 75%, 60%)",
-  "hsl(195, 85%, 55%)",
-  "hsl(310, 80%, 55%)",
-  "hsl(270, 85%, 70%)",
-  "hsl(195, 90%, 65%)",
-];
-
 export const TriangleLoader = () => {
-  const [triangles, setTriangles] = useState<Triangle[]>([]);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [progress, setProgress] = useState(0);
+  const trianglesRef = useRef<Triangle[]>([]);
+  const mouseRef = useRef({ x: -100, y: -100 });
+  const animationRef = useRef<number>();
+
+  const colors = [
+    "hsl(199, 89%, 48%)",
+    "hsl(217, 91%, 60%)",
+    "hsl(186, 100%, 29%)",
+    "hsl(25, 95%, 53%)",
+    "hsl(340, 100%, 50%)",
+  ];
 
   useEffect(() => {
-    // Initialize triangles
-    const initialTriangles: Triangle[] = Array.from({ length: 50 }, (_, i) => ({
-      id: i,
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      size: Math.random() * 30 + 20,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      rotation: Math.random() * 360,
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    trianglesRef.current = Array.from({ length: 50 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
       vx: (Math.random() - 0.5) * 2,
       vy: (Math.random() - 0.5) * 2,
+      size: Math.random() * 30 + 15,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * Math.PI * 2,
     }));
 
-    setTriangles(initialTriangles);
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseRef.current = { x: e.clientX, y: e.clientY };
+    };
 
-    // Animation loop
-    const interval = setInterval(() => {
-      setTriangles((prev) =>
-        prev.map((triangle) => {
-          let newX = triangle.x + triangle.vx;
-          let newY = triangle.y + triangle.vy;
-          let newVx = triangle.vx;
-          let newVy = triangle.vy;
+    window.addEventListener("mousemove", handleMouseMove);
 
-          // Bounce off edges
-          if (newX <= 0 || newX >= window.innerWidth) {
-            newVx *= -1;
-            newX = Math.max(0, Math.min(window.innerWidth, newX));
-          }
-          if (newY <= 0 || newY >= window.innerHeight) {
-            newVy *= -1;
-            newY = Math.max(0, Math.min(window.innerHeight, newY));
-          }
+    const animate = () => {
+      ctx.fillStyle = "hsl(222, 47%, 11%)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-          return {
-            ...triangle,
-            x: newX,
-            y: newY,
-            vx: newVx,
-            vy: newVy,
-            rotation: triangle.rotation + 1,
-          };
-        })
-      );
-    }, 1000 / 60);
+      trianglesRef.current.forEach((triangle) => {
+        const dx = triangle.x - mouseRef.current.x;
+        const dy = triangle.y - mouseRef.current.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const repelRadius = 150;
 
-    return () => clearInterval(interval);
+        if (distance < repelRadius) {
+          const force = (repelRadius - distance) / repelRadius;
+          triangle.vx += (dx / distance) * force * 0.5;
+          triangle.vy += (dy / distance) * force * 0.5;
+        }
+
+        triangle.x += triangle.vx;
+        triangle.y += triangle.vy;
+        triangle.vx *= 0.98;
+        triangle.vy *= 0.98;
+
+        if (triangle.x < 0 || triangle.x > canvas.width) {
+          triangle.vx *= -0.8;
+          triangle.x = Math.max(0, Math.min(canvas.width, triangle.x));
+        }
+        if (triangle.y < 0 || triangle.y > canvas.height) {
+          triangle.vy *= -0.8;
+          triangle.y = Math.max(0, Math.min(canvas.height, triangle.y));
+        }
+
+        triangle.rotation += 0.01;
+
+        ctx.save();
+        ctx.translate(triangle.x, triangle.y);
+        ctx.rotate(triangle.rotation);
+        ctx.fillStyle = triangle.color;
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, -triangle.size / 2);
+        ctx.lineTo(triangle.size / 2, triangle.size / 2);
+        ctx.lineTo(-triangle.size / 2, triangle.size / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      });
+
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + 1;
+      });
+    }, 35);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      clearInterval(progressInterval);
+    };
   }, []);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    setMousePos({ x: e.clientX, y: e.clientY });
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-50 bg-background"
-      onMouseMove={handleMouseMove}
-    >
-      <svg className="h-full w-full">
-        {triangles.map((triangle) => {
-          const dx = mousePos.x - triangle.x;
-          const dy = mousePos.y - triangle.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          const repelForce = Math.max(0, 100 - distance) / 100;
-          const offsetX = -dx * repelForce * 0.5;
-          const offsetY = -dy * repelForce * 0.5;
-
-          return (
-            <polygon
-              key={triangle.id}
-              points={`0,${-triangle.size} ${triangle.size * 0.866},${
-                triangle.size * 0.5
-              } ${-triangle.size * 0.866},${triangle.size * 0.5}`}
-              fill={triangle.color}
-              opacity="0.6"
-              style={{
-                transform: `translate(${triangle.x + offsetX}px, ${
-                  triangle.y + offsetY
-                }px) rotate(${triangle.rotation}deg)`,
-                transition: "transform 0.1s ease-out",
-              }}
-            />
-          );
-        })}
-      </svg>
-
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center">
+      <canvas ref={canvasRef} className="absolute inset-0" />
+      
+      <div className="relative z-10 text-center">
+        <h2 className="mb-8 font-heading text-4xl font-bold text-foreground animate-pulse">
+          Loading Experience...
+        </h2>
+        
+        <div className="mx-auto w-80 h-2 bg-card rounded-full overflow-hidden">
           <div
-            className="mb-4 text-6xl font-black tracking-tight animate-pulse-glow"
+            className="h-full rounded-full transition-all duration-300"
             style={{
+              width: `${progress}%`,
               background: "var(--gradient-accent)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
+              boxShadow: "var(--shadow-glow)",
             }}
-          >
-            Loading
-          </div>
-          <div className="flex justify-center gap-2">
-            <div className="h-3 w-3 animate-bounce rounded-full bg-primary" style={{ animationDelay: "0s" }} />
-            <div className="h-3 w-3 animate-bounce rounded-full bg-secondary" style={{ animationDelay: "0.2s" }} />
-            <div className="h-3 w-3 animate-bounce rounded-full bg-accent" style={{ animationDelay: "0.4s" }} />
-          </div>
+          />
         </div>
+        
+        <p className="mt-4 text-lg text-muted-foreground">{progress}%</p>
       </div>
     </div>
   );

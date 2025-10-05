@@ -1,70 +1,93 @@
-import { useEffect, useState } from "react";
-import heroBackground from "@/assets/hero-background.jpg";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Play, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import heroImage from "@/assets/movieque-hero.jpg";
+import { TriangleLoader } from "./TriangleLoader";
 
 export const HeroSection = () => {
   const [scrollY, setScrollY] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-
+    const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleServicesClick = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      navigate("/services");
+      setIsLoading(false);
+    }, 3500);
+  };
+
+  if (isLoading) {
+    return <TriangleLoader />;
+  }
+
   return (
     <section className="relative h-screen overflow-hidden">
-      {/* Parallax Background */}
       <div
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0 z-0"
         style={{
-          backgroundImage: `url(${heroBackground})`,
+          backgroundImage: `url(${heroImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
           transform: `translateY(${scrollY * 0.5}px)`,
-          willChange: "transform",
+          filter: "sepia(0.2) brightness(0.7)",
         }}
-      >
-        <div className="absolute inset-0" style={{ background: "var(--gradient-overlay)" }} />
-      </div>
+      />
+      
+      <div className="absolute inset-0 z-10" style={{ background: "var(--gradient-overlay)" }} />
+      <div className="absolute inset-0 z-10 bg-sepia-overlay mix-blend-multiply" />
 
-      {/* Content */}
-      <div className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-center">
-        <h1
-          className="mb-6 text-7xl font-black tracking-tight md:text-9xl animate-fade-in-up"
-          style={{
-            background: "var(--gradient-accent)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            transform: `translateY(${scrollY * 0.2}px)`,
-          }}
-        >
-          STREAMFLIX
-        </h1>
-        
-        <p
-          className="text-xl font-light tracking-wide text-foreground/90 md:text-3xl animate-fade-in-up"
-          style={{
-            animationDelay: "0.2s",
-            opacity: 0,
-            animation: "fade-in-up 0.6s ease-out 0.2s forwards",
-            transform: `translateY(${scrollY * 0.15}px)`,
-          }}
-        >
-          Where Stories Come Alive
-        </p>
+      <div className="relative z-20 flex h-full flex-col items-center justify-center px-4 text-center">
+        <div className="animate-pop-in">
+          <h1 className="mb-6 font-heading text-7xl font-black tracking-tight md:text-9xl"
+            style={{
+              background: "var(--gradient-accent)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              textShadow: "0 0 80px hsl(199 89% 48% / 0.5)",
+            }}
+          >
+            MOVIEQUE
+          </h1>
+          
+          <p className="mb-8 text-2xl font-light tracking-[0.2em] text-foreground/90 md:text-3xl">
+            Stream. Binge. Repeat.
+          </p>
 
-        <div
-          className="mt-12 h-1 w-32 rounded-full animate-pulse-glow"
-          style={{ background: "var(--gradient-accent)" }}
-        />
-      </div>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Button
+              onClick={handleServicesClick}
+              size="lg"
+              className="group relative overflow-hidden bg-primary text-lg font-semibold hover:bg-primary/90"
+              style={{ boxShadow: "var(--shadow-glow)" }}
+            >
+              <Sparkles className="mr-2 h-5 w-5 transition-transform group-hover:rotate-12" />
+              Explore Features
+            </Button>
+            
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-primary/50 text-lg font-semibold hover:bg-primary/10"
+            >
+              <Play className="mr-2 h-5 w-5" />
+              Watch Trailer
+            </Button>
+          </div>
+        </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-float">
-        <div className="flex flex-col items-center gap-2 text-foreground/60">
-          <span className="text-sm tracking-wider">SCROLL</span>
-          <div className="h-8 w-[2px] bg-gradient-to-b from-primary to-transparent" />
+        <div className="absolute bottom-10 animate-bounce">
+          <div className="h-12 w-6 rounded-full border-2 border-primary/50 p-2">
+            <div className="h-2 w-2 rounded-full bg-primary mx-auto animate-pulse" />
+          </div>
         </div>
       </div>
     </section>
